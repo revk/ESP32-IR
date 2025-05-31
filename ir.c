@@ -1,4 +1,6 @@
 // IR tools
+static const char __attribute__((unused)) * TAG = "IR";
+
 #include <revk.h>
 #include <ir.h>
 
@@ -93,6 +95,7 @@ ir_task (void *arg)
          if (!j && irlog)
          {
             j = jo_object_alloc ();
+            jo_int (j, "gpio", c->gpio.num);
             if (lead0)
             {
                jo_array (j, "lead");
