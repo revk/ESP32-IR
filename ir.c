@@ -28,7 +28,7 @@ ir_rx_done_callback (rmt_channel_handle_t channel, const rmt_rx_done_event_data_
 static void
 ir_task (void *arg)
 {
-	wc
+   ir_config_t *c = arg;
    if (!ir || !c->gpio.set)
    {
       vTaskDelete (NULL);
