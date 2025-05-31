@@ -1,0 +1,2 @@
+bit	ir.log		.live		// IR logging to MQTT
+bit	ir.debug	.live		// IT logging includes timings
