@@ -213,7 +213,7 @@ ir_task (void *arg)
 void
 ir_start (revk_gpio_t gpio, ir_callback_t * cb)
 {
-   ir_config_t *c = mallocspi (sizeof (*c));
+   ir_config_t *c = malloc (sizeof (*c));
    c->gpio = gpio;
    c->cb = cb;
    revk_task ("ir", ir_task, c, 4);
