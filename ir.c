@@ -38,7 +38,7 @@ ir_task (void *arg)
    rmt_rx_channel_config_t rx_channel_cfg = {
       .clk_src = RMT_CLK_SRC_DEFAULT,
       .resolution_hz = 1000000,
-      .mem_block_symbols = sizeof (ir_rx_symbols) / sizeof (*ir_rx_symbols),
+      .mem_block_symbols = sizeof (c->ir_rx_symbols) / sizeof (*c->ir_rx_symbols),
       .gpio_num = ir->gpio.num,
       .flags.invert_in = ir->gpio.invert,
 #ifdef	CONFIG_IDF_TARGET_ESP32S3
@@ -71,10 +71,9 @@ ir_task (void *arg)
    };
 
    REVK_ERR_CHECK (rmt_enable (rx_channel));
-   REVK_ERR_CHECK (rmt_receive (rx_channel, ir_rx_symbols, sizeof (ir_rx_symbols), &receive_config));
+   REVK_ERR_CHECK (rmt_receive (rx_channel, c->ir_rx_symbols, sizeof (c->ir_rx_symbols), &receive_config));
 
    ESP_LOGE (TAG, "IR started %d", ir->gpio.num);
-   uint8_t *raw = c->raw;
    uint8_t idle = 0;
    while (1)
    {
@@ -82,15 +81,15 @@ ir_task (void *arg)
          lead0 = 0,
          lead1 = 0;
       jo_t j = NULL;
-      if (xQueueReceive (receive_queue, &ir_rx_data, pdMS_TO_TICKS (50)) == pdPASS)
+      if (xQueueReceive (receive_queue, &c->ir_rx_data, pdMS_TO_TICKS (50)) == pdPASS)
       {
          idle = 1;
-         //ESP_LOGE (TAG, "Symbols %d %d/%d", ir_rx_data.num_symbols,ir_rx_symbols[0].level0,ir_rx_symbols[0].level1);
+         //ESP_LOGE (TAG, "Symbols %d %d/%d", c->ir_rx_data.num_symbols,c->ir_rx_symbols[0].level0,c->ir_rx_symbols[0].level1);
          int i = 0;
-         if (ir_rx_symbols[i].duration0 > 2000)
+         if (c->ir_rx_symbols[i].duration0 > 2000)
          {
-            lead0 = ir_rx_symbols[i].duration0;
-            lead1 = ir_rx_symbols[i].duration1;
+            lead0 = c->ir_rx_symbols[i].duration0;
+            lead1 = c->ir_rx_symbols[i].duration1;
             i++;
          }
          if (!j && irlog)
@@ -107,54 +106,54 @@ ir_task (void *arg)
             if (irdebug)
                jo_array (j, "timing");
          }
-         while (i < ir_rx_data.num_symbols)
+         while (i < c->ir_rx_data.num_symbols)
          {
             if (irdebug)
             {
-               jo_int (j, NULL, ir_rx_symbols[i].duration0);
-               if (ir_rx_symbols[i].duration1 || i + 1 < ir_rx_data.num_symbols)
-                  jo_int (j, NULL, ir_rx_symbols[i].duration1);
+               jo_int (j, NULL, c->ir_rx_symbols[i].duration0);
+               if (c->ir_rx_symbols[i].duration1 || i + 1 < c->ir_rx_data.num_symbols)
+                  jo_int (j, NULL, c->ir_rx_symbols[i].duration1);
             }
-            raw[bit / 8] = (raw[bit / 8] >> 1) | (ir_rx_symbols[i].duration0 >= 800 ? 0x80 : 0);
+            c->raw[bit / 8] = (c->raw[bit / 8] >> 1) | (c->ir_rx_symbols[i].duration0 >= 800 ? 0x80 : 0);
             bit++;
-            if (ir_rx_symbols[i].duration1 || i + 1 < ir_rx_data.num_symbols)
+            if (c->ir_rx_symbols[i].duration1 || i + 1 < c->ir_rx_data.num_symbols)
             {
-               raw[bit / 8] = (raw[bit / 8] >> 1) | (ir_rx_symbols[i].duration1 >= 800 ? 0x80 : 0);
+               c->raw[bit / 8] = (c->raw[bit / 8] >> 1) | (c->ir_rx_symbols[i].duration1 >= 800 ? 0x80 : 0);
                bit++;
             }
             i++;
          }
          // Next
-         REVK_ERR_CHECK (rmt_receive (rx_channel, ir_rx_symbols, sizeof (ir_rx_symbols), &receive_config));
+         REVK_ERR_CHECK (rmt_receive (rx_channel, c->ir_rx_symbols, sizeof (c->ir_rx_symbols), &receive_config));
          if (bit)
          {
             if (irdebug)
                jo_close (j);
             if (bit & 7)
-               raw[bit / 8] >>= (8 - (bit & 7));
+               c->raw[bit / 8] >>= (8 - (bit & 7));
             uint8_t byte = (bit + 7) / 8;
             // Work out coding
             uint8_t coding = 0;
             uint8_t b;
             if (!coding)
             {
-               for (b = 0; b < byte && !raw[b]; b++);
+               for (b = 0; b < byte && !c->raw[b]; b++);
                if (b == byte)
                   coding = IR_ZERO;
             }
             if (!coding)
             {
-               for (b = 0; b < byte && !(raw[b] & 0xAA); b++);
+               for (b = 0; b < byte && !(c->raw[b] & 0xAA); b++);
                if (b == byte)
                {                // all 0 are short, so data in 1
                   coding = IR_PLC;
                   b = 0;
                   while (b < bit / 2)
                   {
-                     if (raw[b / 4] & (1 << ((b & 3) * 2)))
-                        raw[b / 8] |= (1 << (b & 7));
+                     if (c->raw[b / 4] & (1 << ((b & 3) * 2)))
+                        c->raw[b / 8] |= (1 << (b & 7));
                      else
-                        raw[b / 8] &= ~(1 << (b & 7));
+                        c->raw[b / 8] &= ~(1 << (b & 7));
                      b++;
                   }
                   bit = b;
@@ -162,17 +161,17 @@ ir_task (void *arg)
             }
             if (!coding)
             {
-               for (b = 0; b < byte && !(raw[b] & 0x55); b++);
+               for (b = 0; b < byte && !(c->raw[b] & 0x55); b++);
                if (b == byte)
                {                // all 1 are short so data in 0
                   coding = IR_PDC;
                   b = 0;
                   while (b < bit / 2)
                   {
-                     if (raw[b / 4] & (2 << ((b & 3) * 2)))
-                        raw[b / 8] |= (1 << (b & 7));
+                     if (c->raw[b / 4] & (2 << ((b & 3) * 2)))
+                        c->raw[b / 8] |= (1 << (b & 7));
                      else
-                        raw[b / 8] &= ~(1 << (b & 7));
+                        c->raw[b / 8] &= ~(1 << (b & 7));
                      b++;
                   }
                   bit = b;
@@ -180,16 +179,16 @@ ir_task (void *arg)
             }
             // Bi Phase coding for another day
             if (bit & 7)
-               raw[bit / 8] >>= (8 - (bit & 7));
+               c->raw[bit / 8] >>= (8 - (bit & 7));
             byte = (bit + 7) / 8;
             if (cb)
-               cb (coding, lead0, lead1, bit, raw);
+               cb (coding, lead0, lead1, bit, c->raw);
             if (irlog && j)
             {
                jo_string (j, "coding", ir_coding[coding]);
                jo_array (j, "data");
                for (int i = 0; i < byte; i++)
-                  jo_stringf (j, NULL, "%02X", raw[i]);
+                  jo_stringf (j, NULL, "%02X", c->raw[i]);
                jo_close (j);
                jo_int (j, "bits", bit);
                revk_info ("ir", &j);
