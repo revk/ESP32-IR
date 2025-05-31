@@ -2,6 +2,7 @@
 static const char __attribute__((unused)) * TAG = "IR";
 
 #include <revk.h>
+#include <driver/rmt_rx.h>
 #include <ir.h>
 
 static const char *const ir_coding[] = { "UNKNOWN", "IDLE", "ZERO", "PDC", "PLC" };
