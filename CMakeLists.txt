@@ -10,3 +10,5 @@ idf_component_register(
 )
 
 add_definitions(-DBUILD_ESP32_USING_CMAKE)
+set (COMPONENT_REQUIRES "ESP32-RevK")
+
