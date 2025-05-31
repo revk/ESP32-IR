@@ -28,19 +28,19 @@ ir_rx_done_callback (rmt_channel_handle_t channel, const rmt_rx_done_event_data_
 static void
 ir_task (void *arg)
 {
-   ir_config_t *ir = arg;
-   if (!ir || !ir->gpio.set)
+	wc
+   if (!ir || !c->gpio.set)
    {
       vTaskDelete (NULL);
       return;
    }
-   revk_gpio_input (ir->gpio);
+   revk_gpio_input (c->gpio);
    rmt_rx_channel_config_t rx_channel_cfg = {
       .clk_src = RMT_CLK_SRC_DEFAULT,
       .resolution_hz = 1000000,
       .mem_block_symbols = sizeof (c->ir_rx_symbols) / sizeof (*c->ir_rx_symbols),
-      .gpio_num = ir->gpio.num,
-      .flags.invert_in = ir->gpio.invert,
+      .gpio_num = c->gpio.num,
+      .flags.invert_in = c->gpio.invert,
 #ifdef	CONFIG_IDF_TARGET_ESP32S3
       .flags.with_dma = 1,
 #endif
@@ -73,7 +73,7 @@ ir_task (void *arg)
    REVK_ERR_CHECK (rmt_enable (rx_channel));
    REVK_ERR_CHECK (rmt_receive (rx_channel, c->ir_rx_symbols, sizeof (c->ir_rx_symbols), &receive_config));
 
-   ESP_LOGE (TAG, "IR started %d", ir->gpio.num);
+   ESP_LOGE (TAG, "IR started %d", c->gpio.num);
    uint8_t idle = 0;
    while (1)
    {
