@@ -181,8 +181,8 @@ ir_task (void *arg)
             if (bit & 7)
                c->raw[bit / 8] >>= (8 - (bit & 7));
             byte = (bit + 7) / 8;
-            if (cb)
-               cb (coding, lead0, lead1, bit, c->raw);
+            if (c->cb)
+               c->cb (coding, lead0, lead1, bit, c->raw);
             if (irlog && j)
             {
                jo_string (j, "coding", ir_coding[coding]);
@@ -202,8 +202,8 @@ ir_task (void *arg)
          {
             //ESP_LOGE (TAG, "IR idle");
             idle = 0;
-            if (cb)
-               cb (IR_IDLE, 0, 0, 0, NULL);
+            if (c->cb)
+               c->cb (IR_IDLE, 0, 0, 0, NULL);
          }
       }
    }
