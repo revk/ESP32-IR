@@ -29,7 +29,7 @@ static void
 ir_task (void *arg)
 {
    ir_config_t *c = arg;
-   if (!ir || !c->gpio.set)
+   if (!c || !c->gpio.set)
    {
       vTaskDelete (NULL);
       return;
