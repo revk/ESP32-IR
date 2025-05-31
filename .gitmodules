@@ -1,0 +1,3 @@
+[submodule "ESP32-IR"]
+	path = ESP32-IR
+	url = https://github.com/revk/ESP32-IR
